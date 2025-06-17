@@ -1,0 +1,18 @@
+db.aspirantes.aggregate([
+  {
+    $group: {
+      _id: "$carrera_objetivo",
+      total_aspirantes: { $sum: 1 }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      carrera: "$_id",
+      total_aspirantes: 1
+    }
+  },
+  {
+    $out: "resumen_carrera"
+  }
+]);
