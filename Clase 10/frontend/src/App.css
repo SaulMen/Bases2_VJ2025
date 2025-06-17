@@ -1,0 +1,15 @@
+.App {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+.selector {
+  margin-top: 20px;
+}
+
+.resultado {
+  margin-top: 20px;
+  background: #f4f4f4;
+  padding: 10px;
+  border-radius: 8px;
+}
