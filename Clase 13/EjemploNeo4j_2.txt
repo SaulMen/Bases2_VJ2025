@@ -1,0 +1,126 @@
+Consultas neo4j
+
+1. Limpiar la Base de Datos (Opcional, si estás empezando de cero)
+
+MATCH (n) DETACH DELETE n;
+
+2. Crear el Grafo de Ejemplo: Actores, Películas y Directores
+
+// Creamos nodos: actores y directores y peliculas
+CREATE (p1:Persona:Actor {nombre: 'Tom Hanks', nacimiento: 1956})
+CREATE (p2:Persona:Actor {nombre: 'Leonardo DiCaprio', nacimiento: 1974})
+CREATE (p3:Persona:Actor {nombre: 'Emma Watson', nacimiento: 1990})
+CREATE (p4:Persona:Director {nombre: 'Christopher Nolan', nacimiento: 1970})
+CREATE (p5:Persona:Director {nombre: 'Quentin Tarantino', nacimiento: 1963})
+CREATE (p6:Persona:Actor:Director {nombre: 'Clint Eastwood', nacimiento: 1930}) // Puede ser actor y director
+CREATE (p7:Persona:Actor {nombre: 'Brad Pitt', nacimiento: 1963})
+CREATE (p8:Persona:Actor {nombre: 'Uma Thurman', nacimiento: 1970})
+
+// Películas
+CREATE (m1:Pelicula {titulo: 'Forrest Gump', ano: 1994, genero: 'Drama'})
+CREATE (m2:Pelicula {titulo: 'Inception', ano: 2010, genero: 'Sci-Fi'})
+CREATE (m3:Pelicula {titulo: 'Pulp Fiction', ano: 1994, genero: 'Crimen'})
+CREATE (m4:Pelicula {titulo: 'Gran Torino', ano: 2008, genero: 'Drama'})
+CREATE (m5:Pelicula {titulo: 'Once Upon a Time in Hollywood', ano: 2019, genero: 'Drama'})
+CREATE (m6:Pelicula {titulo: 'Titanic', ano: 1997, genero: 'Romance'})
+CREATE (m7:Pelicula {titulo: 'The Dark Knight', ano: 2008, genero: 'Action'})
+
+// Creamos las relaciones
+
+MATCH (t:Persona {nombre: 'Tom Hanks'}), (fg:Pelicula {titulo: 'Forrest Gump'})
+CREATE (t)-[:ACTUO_EN {papel: 'Forrest Gump'}]->(fg);
+
+MATCH (l:Persona {nombre: 'Leonardo DiCaprio'}), (inc:Pelicula {titulo: 'Inception'})
+CREATE (l)-[:ACTUO_EN {papel: 'Cobb'}]->(inc);
+MATCH (l:Persona {nombre: 'Leonardo DiCaprio'}), (tit:Pelicula {titulo: 'Titanic'})
+CREATE (l)-[:ACTUO_EN {papel: 'Jack Dawson'}]->(tit);
+MATCH (l:Persona {nombre: 'Leonardo DiCaprio'}), (ou:Pelicula {titulo: 'Once Upon a Time in Hollywood'})
+CREATE (l)-[:ACTUO_EN {papel: 'Rick Dalton'}]->(ou);
+
+// Christopher Nolan (Director)
+MATCH (cn:Persona {nombre: 'Christopher Nolan'}), (inc:Pelicula {titulo: 'Inception'})
+CREATE (cn)-[:DIRIGIO]->(inc);
+MATCH (cn:Persona {nombre: 'Christopher Nolan'}), (dk:Pelicula {titulo: 'The Dark Knight'})
+CREATE (cn)-[:DIRIGIO]->(dk);
+
+// Quentin Tarantino (Director)
+MATCH (qt:Persona {nombre: 'Quentin Tarantino'}), (pf:Pelicula {titulo: 'Pulp Fiction'})
+CREATE (qt)-[:DIRIGIO]->(pf);
+MATCH (qt:Persona {nombre: 'Quentin Tarantino'}), (ou:Pelicula {titulo: 'Once Upon a Time in Hollywood'})
+CREATE (qt)-[:DIRIGIO]->(ou);
+
+// Clint Eastwood (Actor y Director)
+MATCH (ce:Persona {nombre: 'Clint Eastwood'}), (gt:Pelicula {titulo: 'Gran Torino'})
+CREATE (ce)-[:DIRIGIO]->(gt);
+MATCH (ce:Persona {nombre: 'Clint Eastwood'}), (gt:Pelicula {titulo: 'Gran Torino'})
+CREATE (ce)-[:ACTUO_EN {papel: 'Walt Kowalski'}]->(gt); // Actuó en su propia película
+
+// Brad Pitt
+MATCH (bp:Persona {nombre: 'Brad Pitt'}), (ou:Pelicula {titulo: 'Once Upon a Time in Hollywood'})
+CREATE (bp)-[:ACTUO_EN {papel: 'Cliff Booth'}]->(ou);
+
+// Uma Thurman
+MATCH (ut:Persona {nombre: 'Uma Thurman'}), (pf:Pelicula {titulo: 'Pulp Fiction'})
+CREATE (ut)-[:ACTUO_EN {papel: 'Mia Wallace'}]->(pf);
+
+// Otras relaciones
+MATCH (l:Persona {nombre: 'Leonardo DiCaprio'}), (bp:Persona {nombre: 'Brad Pitt'})
+CREATE (l)-[:CONOCIO_EN_SET {pelicula: 'Once Upon a Time in Hollywood'}]->(bp);
+
+MATCH (cn:Persona {nombre: 'Christopher Nolan'}), (l:Persona {nombre: 'Leonardo DiCaprio'})
+CREATE (cn)-[:COLABORO_EN {proyecto: 'Inception'}]->(l);
+
+MATCH (qt:Persona {nombre: 'Quentin Tarantino'}), (ut:Persona {nombre: 'Uma Thurman'})
+CREATE (qt)-[:HA_TRABAJADO_CON]->(ut);
+
+
+
+ Consultas
+
+(algunas solo muestran en tablas)
+
+# CONSULTA 1: Encontrar todas las películas de un género específico
+
+MATCH (m:Pelicula)
+WHERE m.genero = 'Sci-Fi'
+RETURN m.titulo, m.ano;
+
+
+# CONSULTA 2 Encontrar qué películas dirigió un director específico
+
+MATCH (d:Persona:Director {nombre: 'Christopher Nolan'})-[:DIRIGIO]->(m:Pelicula)
+RETURN d.nombre AS Director, m.titulo AS Pelicula;
+
+
+# CONSULTA 3 Encontrar qué actores actuaron en una película específica y su papel
+
+MATCH (a:Persona:Actor)-[r:ACTUO_EN]->(m:Pelicula {titulo: 'Once Upon a Time in Hollywood'})
+RETURN a.nombre AS Actor, r.papel AS Papel, m.titulo AS Pelicula;
+
+
+# CONSULTA 4 Encontrar a todos los actores que nacieron antes de un año específico
+
+MATCH (a:Persona:Actor)
+WHERE a.nacimiento < 1970
+RETURN a.nombre, a.nacimiento
+ORDER BY a.nacimiento DESC
+LIMIT 5;
+
+
+# CONSULTA 5 Encontrar qué directores y actores trabajaron en la misma película
+
+MATCH (actor:Persona:Actor)-[:ACTUO_EN]->(pelicula:Pelicula)<-[:DIRIGIO]-(director:Persona:Director)
+RETURN actor.nombre AS Actor, pelicula.titulo AS Pelicula, director.nombre AS Director;
+
+
+# CONSULTA 6 Contar el número de películas por género
+
+MATCH (m:Pelicula)
+RETURN m.genero AS Genero, count(m) AS NumeroDePeliculas
+ORDER BY NumeroDePeliculas DESC;
+
+# CONSULTA 7 Encontrar personas que son tanto actores como directores
+
+MATCH (p:Persona:Actor:Director)
+RETURN p.nombre AS 'Actor y Director';
+

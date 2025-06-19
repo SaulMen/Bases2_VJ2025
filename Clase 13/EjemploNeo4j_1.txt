@@ -1,0 +1,21 @@
+
+# EJEMPLO 1
+CREATE (j:Persona {nombre: 'Juan'})
+CREATE (m:Persona {nombre: 'Maria'})
+CREATE (p:Persona {nombre: 'Pedro'})
+CREATE (a:Persona {nombre: 'Ana'})
+
+CREATE (j)-[:AMIGO_DE]->(m)
+CREATE (j)-[:AMIGO_DE]->(p)
+CREATE (m)-[:AMIGO_DE]->(a)
+CREATE (p)-[:AMIGO_DE]->(a)
+
+# CONSULTA 1 - Obtener todas la Personas
+MATCH (p:Persona) RETURN p
+
+# CONSULTA 2 - Obtener los nombres de todas las Personas
+MATCH (p:Persona) RETURN p.nombre
+
+# CONSULTA 5 - Encontrar los amigos de Juan
+MATCH (juan:Persona {nombre: 'Juan'})-[:AMIGO_DE]->(amigo)
+RETURN juan.nombre, amigo.nombre
