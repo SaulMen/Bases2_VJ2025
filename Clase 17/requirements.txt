@@ -1,0 +1,4 @@
+Flask
+redis
+prometheus_client
+flask-cors

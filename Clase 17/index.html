@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reseñas de Videojuegos</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        form div { margin-bottom: 10px; }
+        input[type="text"], input[type="number"], textarea { width: 100%; padding: 8px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        .game-item { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; }
+        .review-item { margin-left: 20px; border-left: 2px solid #eee; padding-left: 10px; margin-top: 5px; }
+        .reviews-section { margin-top: 10px; border-top: 1px dashed #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Reseñas de Videojuegos</h1>
+
+        <h2>Añadir Nuevo Juego</h2>
+        <form id="add-game-form">
+            <div>
+                <label for="game-title">Título:</label>
+                <input type="text" id="game-title" required>
+            </div>
+            <div>
+                <label for="game-genre">Género:</label>
+                <input type="text" id="game-genre">
+            </div>
+            <div>
+                <label for="game-developer">Desarrollador:</label>
+                <input type="text" id="game-developer">
+            </div>
+            <button type="submit">Añadir Juego</button>
+        </form>
+
+        <hr>
+
+        <h2>Juegos y Reseñas</h2>
+        <div id="games-list"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        document.getElementById('add-game-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log("hola");
+            const title = document.getElementById('game-title').value;
+            const genre = document.getElementById('game-genre').value;
+            const developer = document.getElementById('game-developer').value;
+
+            const response = await fetch(`${API_URL}/games`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, genre, developer })
+            });
+            const data = await response.json();
+            alert(data.message);
+            
+            document.getElementById('add-game-form').reset();
+            loadGames(); // racargo la lista de juegos
+        });
+
+        async function loadGames() {
+            const gamesListDiv = document.getElementById('games-list');
+            gamesListDiv.innerHTML = 'Cargando juegos...';
+
+            try {
+                const response = await fetch(`${API_URL}/games`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const games = await response.json();
+                gamesListDiv.innerHTML = ''; // limpiamos el mensaje de carga
+
+                if (games.length === 0) {
+                    gamesListDiv.innerHTML = '<p>No hay juegos añadidos todavía. ¡Añade uno!</p>';
+                    return;
+                }
+
+                for (const game of games) {
+                    const gameItem = document.createElement('div');
+                    gameItem.className = 'game-item';
+                    gameItem.innerHTML = `
+                        <h3>${game.title} <small>(${game.genre || 'N/A'})</small></h3>
+                        <p>Desarrollador: ${game.developer || 'N/A'}</p>
+                        
+                        <div class="reviews-section">
+                            <h4>Reseñas:</h4>
+                            <div id="reviews-for-${game.id}">Cargando reseñas...</div>
+                            <form class="add-review-form" data-game-id="${game.id}">
+                                <h5>Añadir Reseña:</h5>
+                                <div>
+                                    <label for="review-score-${game.id}">Puntuación (1-5):</label>
+                                    <input type="number" id="review-score-${game.id}" min="1" max="5" required>
+                                </div>
+                                <div>
+                                    <label for="review-comment-${game.id}">Comentario:</label>
+                                    <textarea id="review-comment-${game.id}" rows="3"></textarea>
+                                </div>
+                                <div>
+                                    <label for="review-user-${game.id}">Tu Nombre:</label>
+                                    <input type="text" id="review-user-${game.id}" value="usuario">
+                                </div>
+                                <button type="submit">Enviar Reseña</button>
+                            </form>
+                        </div>
+                    `;
+                    gamesListDiv.appendChild(gameItem);
+                    loadReviewsForGame(game.id); // reseñas para cada juego
+                }
+
+                // listeners
+                document.querySelectorAll('.add-review-form').forEach(form => {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const gameId = form.dataset.gameId;
+                        const score = document.getElementById(`review-score-${gameId}`).value;
+                        const comment = document.getElementById(`review-comment-${gameId}`).value;
+                        const userId = document.getElementById(`review-user-${gameId}`).value;
+
+                        const response = await fetch(`${API_URL}/games/${gameId}/reviews`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ score: parseInt(score), comment, user_id: userId })
+                        });
+                        const data = await response.json();
+                        alert(data.message);
+                        form.reset(); // limpiar el formulario de reseña
+                        loadReviewsForGame(gameId); // recargo las reseñas solo para este juego
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error al cargar juegos:', error);
+                gamesListDiv.innerHTML = '<p style="color: red;">Error al cargar juegos. Asegúrate de que el backend esté funcionando.</p>';
+            }
+        }
+
+        async function loadReviewsForGame(gameId) {
+            const reviewsDiv = document.getElementById(`reviews-for-${gameId}`);
+            reviewsDiv.innerHTML = ''; // limpiar las reseñas existentes
+
+            try {
+                const response = await fetch(`${API_URL}/games/${gameId}/reviews`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const reviews = await response.json();
+
+                if (reviews.length === 0) {
+                    reviewsDiv.innerHTML = '<p>Sé el primero en reseñar este juego.</p>';
+                    return;
+                }
+
+                reviews.forEach(review => {
+                    const reviewItem = document.createElement('div');
+                    reviewItem.className = 'review-item';
+                    const date = new Date(parseInt(review.timestamp) * 1000).toLocaleString(); // Convertir timestamp a fecha legible
+                    reviewItem.innerHTML = `
+                        <p><strong>${review.score}/5</strong> por ${review.user_id || 'usuario'} el ${date}</p>
+                        <p>${review.comment}</p>
+                    `;
+                    reviewsDiv.appendChild(reviewItem);
+                });
+            } catch (error) {
+                console.error(`Error al cargar reseñas para el juego ${gameId}:`, error);
+                reviewsDiv.innerHTML = '<p style="color: red;">Error al cargar reseñas.</p>';
+            }
+        }
+
+        loadGames();
+    </script>
+</body>
+</html>
